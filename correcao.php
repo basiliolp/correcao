@@ -18,11 +18,7 @@
                     <!-- Área de pesquisa de pacientes -->
                     <div class="w-1/4 block">
                         <form action="{{ route('dashboard') }}" method="GET">
-                            <input type="text" id="searchInput3" name="search"
-                            class="border-gray-300 rounded-md px-4 py-2 w-full bg-white border shadow-sm border-slate-300 
-                            placeholder-slate-400 focus:outline-none focus:border-green-800 focus:ring-green-800 block 
-                            w-full rounded-md sm:text-sm focus:ring-1 focus:ring-opacity-50" placeholder="Nome ou Cartão SUS...">
-
+                            <input type="text" id="searchInput" name="search" class="border-gray-300 rounded-md px-4 py-2 w-full bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-green-800 focus:ring-green-800 block w-full rounded-md sm:text-sm focus:ring-1 focus:ring-opacity-50" placeholder="Nome ou Cartão SUS...">
                             <button class="d-none" type="submit">Search</button>
                         </form>
                     </div>
@@ -47,22 +43,22 @@
             <!-- Tabela de Atendimentos -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 d-flex flex-column">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="w-1/5 px-20 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="w-1/5 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Prioridade
                                 </th>
-                                <th scope="col" class="w-1/5 px-20 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="w-1/5 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Nome
                                 </th>
                                 <th scope="col" class="w-1/5 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Identificação SUS
                                 </th>
-                                <th scope="col" class="w-1/5 px-20 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="w-1/5 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Data
                                 </th>
-                                <th scope="col" class="w-1/5 px-20 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th scope="col" class="w-1/5 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Ver mais
                                 </th>
                             </tr>
@@ -79,37 +75,62 @@
     </div>
 
     <script>
-        document.getElementById('searchInput3').addEventListener('input', function() {
-            const searchText = this.value.toLowerCase();
+        // Seleciona o campo de entrada de texto
+        const searchInput = document.getElementById('searchInput');
+
+        // Adiciona um evento de escuta para o evento de input (quando o usuário digita algo)
+        searchInput.addEventListener('input', function() {
+            // Obtém o valor digitado pelo usuário e converte para minúsculas para tornar a pesquisa insensível a maiúsculas e minúsculas
+            const searchText = searchInput.value.toLowerCase();
+
+            // Seleciona todas as linhas de atendimento
             const atendimentos = document.querySelectorAll('.row');
 
+            // Itera sobre cada atendimento
             atendimentos.forEach(function(atendimento) {
+                // Obtém todo o texto dentro do atendimento
                 const atendimentoText = atendimento.textContent.toLowerCase();
+
+                // Verifica se o texto de pesquisa está presente em alguma parte do atendimento
                 if (atendimentoText.includes(searchText)) {
+                    // Se estiver presente, mostra o atendimento
                     atendimento.style.display = '';
                 } else {
+                    // Se não estiver presente, esconde o atendimento
                     atendimento.style.display = 'none';
                 }
             });
         });
 
         function meusEncaminhamentos(tipoUsuario) {
-            const form = document.getElementById('dashboardForm');
             const checkbox = document.getElementById('switchVerAtendimentos');
+            checkbox.addEventListener('change', function() {
+                const form = document.getElementById('dashboardForm');
+                const tipoUsuarioAtual = '{{ \Illuminate\Support\Facades\Auth::user()->attention_type }}'; // Obtenha o tipo de usuário de onde for apropriado
 
-            if (checkbox.checked) {            
-                form.action = '{{ route('dashboard', ['search' => '']) }}' + tipoUsuario;
-            } else {           
-                form.action = "{{ route('dashboard') }}";
-            }            
-            form.submit();
+                // Verifica se o switch está marcado
+                if (checkbox.checked) {
+                    // Se estiver marcado, filtra apenas os atendimentos encaminhados para o tipo de usuário atual
+                    form.action = '{{ route('dashboard', ['search' => tipoUsuarioAtual]) }}';
+                } else {
+                    // Se não estiver marcado, volta para a rota padrão sem filtro
+                    form.action = "{{ route('dashboard') }}";
+                }
+                form.submit();
+            });
+        }
+
+        function converteData(params) {
+            var partes = params.split("-");
+            return partes[2] + "-" + partes[1] + "-" + partes[0];
         }
 
         function resgatarDados(atendimento) {
             atendimento = JSON.parse(atendimento);
+
             document.getElementById('nome').value = atendimento.nome;
             document.getElementById('idade').value = atendimento.idade;
-            if(atendimento.sexo === 'masculino') {
+            if (atendimento.sexo && atendimento.sexo === 'masculino') {
                 document.getElementById('masculino').checked = true;
             } else {
                 document.getElementById('feminino').checked = true;
@@ -125,49 +146,39 @@
             document.getElementById('comorbidades').value = atendimento.comorbidades;
             document.getElementById('ultima-internacao').value = atendimento.ultima_internacao;
             document.getElementById('medico-responsavel').value = atendimento.medico_responsavel;
-            if(atendimento.prioridade === 'alta') {
+
+            if (atendimento.prioridade && atendimento.prioridade === 'alta') {
                 document.getElementById('alta').checked = true;
-            } else if(atendimento.prioridade === 'media'){
+            } else if (atendimento.prioridade === 'media') {
                 document.getElementById('media').checked = true;
             } else {
                 document.getElementById('baixa').checked = true;
             }
-            document.getElementById('neurologicas').checked = !!atendimento.neurologicas;
-            document.getElementById('dor').checked = !!atendimento.dor_descricao;
+
+            if (atendimento.neurologicas) {
+                document.getElementById('neurologicas').checked = true;
+            }
+
+            if (atendimento.dor_descricao) {
+                document.getElementById('dor').checked = true;
+            }
             document.getElementById('dor_descricao').value = atendimento.dor_descricao;
-            document.getElementById('incapacidade').checked = !!atendimento.incapacidade;
+
+            if (atendimento.incapacidade) {
+                document.getElementById('incapacidade').checked = true;
+            }
             document.getElementById('avds').value = atendimento.incapacidade_descricao;
-            document.getElementById('osteomusculares').checked = !!atendimento.osteomusculares;
+
+            if (atendimento.osteomusculares) {
+                document.getElementById('osteomusculares').checked = true;
+            }
             document.getElementById('motivos-osteomusculares').value = atendimento.osteomusculares_descricao;
-            document.getElementById('uroginecologicas').checked = !!atendimento.uroginecologicas;
+
+            if (atendimento.uroginecologicas) {
+                document.getElementById('uroginecologicas').checked = true;
+            }
             document.getElementById('motivos-uroginecologicas').value = atendimento.uroginecologicas_descricao;
-            document.getElementById('cardiovasculares').checked = !!atendimento.cardiovasculares;
-            document.getElementById('motivos-cardiovasculares').value = atendimento.cardiovasculares_descricao;
-            document.getElementById('respiratorias').checked = !!atendimento.respiratorias;
-            document.getElementById('motivos-respiratorias').value = atendimento.respiratorias_descricao;
-            document.getElementById('oncologicas').checked = !!atendimento.oncologicas;
-            document.getElementById('motivos-oncologicas').value = atendimento.oncologicas_descricao;
-            document.getElementById('pediatria').checked = !!atendimento.pediatria;
-            document.getElementById('motivos-pediatria').value = atendimento.pediatria_descricao;
-            document.getElementById('multiplas').checked = !!atendimento.pediatria;
-            document.getElementById('motivos-multiplas').value = atendimento.pediatria_descricao;
+            document.getElementById('observacao').value = atendimento.observacao;
         }
     </script>
-
-    <!-- Modal Novo Paciente -->
-    <div class="modal fade" id="modalNovoPaciente" tabindex="-1" role="dialog" aria-labelledby="modalNovoPacienteLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalNovoPacienteLabel">Novo Paciente</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    @include('newpacientemodal')
-                </div>
-            </div>
-        </div>
-    </div>
 </x-app-layout>
